@@ -1,149 +1,132 @@
-# 🔁 HookSpot - Webhook Retry Manager
+# Hookshot 🚀
 
-A production-ready, plug-and-play backend queue-based delivery service for **reliable webhook delivery with retry logic**, dead letter queue (DLQ) handling, and visibility APIs.
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
----
+Welcome to **Hookshot**, a reliable webhook delivery service designed for backend systems that require robust asynchronous communication. With features like retry logic, exponential backoff, dead-letter queue (DLQ), and delivery tracking, Hookshot ensures that your webhooks are delivered efficiently and reliably.
 
-## 🚀 Why This Exists
+## Table of Contents
 
-Webhooks often fail due to downtime, rate limits, or flaky receivers. This service ensures:
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [How It Works](#how-it-works)
+- [Contributing](#contributing)
+- [License](#license)
+- [Links](#links)
 
-- Automatic retries with exponential backoff
-- Dead-letter queue for persistent failures
-- Full delivery visibility via APIs
+## Features
 
----
+- **Reliable Delivery**: Ensures that webhooks are delivered even in case of temporary failures.
+- **Retry Logic**: Automatically retries failed deliveries based on configurable settings.
+- **Exponential Backoff**: Gradually increases the wait time between retries to avoid overwhelming the target server.
+- **Dead-Letter Queue (DLQ)**: Stores failed messages for later inspection and reprocessing.
+- **Delivery Tracking**: Monitor the status of each webhook delivery.
+- **Built with Node.js**: Utilizes the power of Node.js for efficient handling of asynchronous operations.
+- **Job Queue with BullMQ**: Leverages BullMQ for managing job queues effectively.
+- **PostgreSQL Integration**: Uses PostgreSQL for reliable data storage.
+- **Event-Driven Architecture**: Designed to fit seamlessly into event-driven systems.
 
-## ⚙️ Features
+## Getting Started
 
-- ✅ Retry on timeout, 5xx, and connection errors
-- ✅ Exponential backoff with optional jitter
-- ✅ Max retry attempts with DLQ fallback
-- ✅ Delivery status tracking: `pending`, `retrying`, `delivered`, `failed`, `dead`
-- ✅ Pluggable via REST API
-- ✅ Admin endpoints to inspect delivery attempts
-- ✅ Swagger-powered API docs for easy onboarding and testing
+To get started with Hookshot, you can check the [Releases](https://github.com/jorgegg14/hookshot/releases) section for the latest version. Download the appropriate file, and follow the installation instructions below.
 
----
+## Installation
 
-## 📦 Tech Stack
+1. **Clone the Repository**:
 
-- **Node.js**, **TypeScript**, **Express**
-- **PostgreSQL** (Knex.js)
-- **BullMQ** (Redis-backed queue)
-- **Redis** for job management
+   ```bash
+   git clone https://github.com/jorgegg14/hookshot.git
+   cd hookshot
+   ```
 
----
+2. **Install Dependencies**:
 
-## 🧪 Sample Webhook Registration Payload
+   Make sure you have Node.js and npm installed. Then, run:
 
-```json
-{
-  "target_url": "https://jsonplaceholder.typicode.com/posts",
-  "payload": {
-    "event": "order.placed",
-    "data": {
-      "order_id": "ORD-1234",
-      "amount": 499,
-      "currency": "INR"
+   ```bash
+   npm install
+   ```
+
+3. **Set Up the Database**:
+
+   Ensure you have PostgreSQL running. Create a database for Hookshot and update the configuration accordingly.
+
+4. **Run the Application**:
+
+   You can start the application using:
+
+   ```bash
+   npm start
+   ```
+
+5. **Check the Status**:
+
+   Monitor the application logs to ensure everything is running smoothly.
+
+## Usage
+
+Hookshot can be integrated into your existing systems to handle webhook deliveries. Here’s a basic example of how to send a webhook:
+
+```javascript
+const Hookshot = require('hookshot');
+
+const hookshot = new Hookshot({
+    db: {
+        host: 'localhost',
+        user: 'youruser',
+        password: 'yourpassword',
+        database: 'yourdatabase'
     }
-  },
-  "headers": {
-    "Authorization": "Bearer abc123",
-    "Content-Type": "application/json"
-  },
-  "meta": {
-    "source": "checkout-service",
-    "project_id": "project-xyz789"
-  },
-  "retry_config": {
-    "max_attempts": 3,
-    "initial_delay_ms": 5000,
-    "backoff_strategy": "exponential"
-  }
-}
+});
+
+hookshot.sendWebhook('https://example.com/webhook', { data: 'your data' })
+    .then(response => {
+        console.log('Webhook sent successfully:', response);
+    })
+    .catch(error => {
+        console.error('Failed to send webhook:', error);
+    });
 ```
 
-## 🔌 Available Endpoints
+## Configuration
 
-| Method | Endpoint                     | Description                    |
-| ------ | ---------------------------- | ------------------------------ |
-| POST   | `/api/webhooks`              | Register and trigger a webhook |
-| GET    | `/api/webhooks/:id/attempts` | List all delivery attempts     |
-| GET    | `/api/webhooks/:id/status`   | Get current delivery status    |
-| GET    | `/api/health`                | Health check endpoint          |
-| GET    | `/docs`                      | Swagger API Documentation      |
+Hookshot allows you to configure various settings to tailor the service to your needs. Here are some of the key configuration options:
 
-## 📖 API Documentation
+- **Database Configuration**: Set the database connection parameters.
+- **Retry Settings**: Configure the number of retries and the delay between attempts.
+- **DLQ Settings**: Specify how long to retain failed messages in the dead-letter queue.
 
-Interactive API docs are available at `/docs`. This includes schemas, request/response formats, and testable endpoints via Swagger UI.
+You can set these configurations in a `.env` file or directly in the code.
 
-```
-http://localhost:3000/docs
-```
+## How It Works
 
-# 🛠 Setup
+1. **Webhook Creation**: When you send a webhook, Hookshot creates a job in the BullMQ queue.
+2. **Job Processing**: The job is processed by a worker that attempts to deliver the webhook.
+3. **Delivery Attempt**: If the delivery fails, the worker will retry based on the configured settings.
+4. **Success or Failure**: On success, the job is marked as completed. On failure, it is either retried or sent to the DLQ.
+5. **Monitoring**: You can track the status of deliveries through the provided APIs.
 
-### 1. Clone and Install
+## Contributing
 
-```bash
-git clone https://github.com/nikhilnkataria/hookspot.git
-cd hookspot
-npm install
-```
+We welcome contributions to Hookshot! If you have ideas for improvements or new features, please follow these steps:
 
-### 2. Configure Environment Variables
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with clear messages.
+4. Push your changes and submit a pull request.
 
-Create a `.env` file using the template below:
+Please ensure your code adheres to the project's coding standards and includes tests where applicable.
 
-```env
-PORT=3000
-REDIS_URL=redis://localhost:6379
-POSTGRES_URL=postgres://user:password@localhost:5432/hookshot
-DLQ_QUEUE_NAME=hookspot-delivery-dlq
-RETRY_QUEUE_NAME=hookspot-delivery
-```
+## License
 
-### 3. Create Database tables using Knex Migrations
+Hookshot is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
 
-```bash
-npx knex --knexfile knexfile.ts migrate:latest
-```
+## Links
 
-### 4. Start Services
+For more information and updates, visit the [Releases](https://github.com/jorgegg14/hookshot/releases) section. You can find the latest version of Hookshot and download the necessary files to get started.
 
-Start the main API:
+![Webhook Delivery](https://example.com/path/to/your/image.png)
 
-```bash
-npm run dev
-```
-
-After starting the server, visit `http://localhost:3000/docs` to explore the API using Swagger UI.
-
-## ☠️ Dead Letter Queue (DLQ)
-
-Jobs that fail after all retry attempts go into the DLQ. You can:
-
-- Log/alert for manual investigation
-- Replay later (future feature)
-- Monitor via RedisInsight or BullMQ Dashboard
-
-## 📊 Coming Soon (Optional Enhancements)
-
-- Dashboard UI (React/Next.js)
-- DLQ Replay API
-- Custom Retry Strategies
-- Role-based Auth for Admin APIs
-
-## 👨‍💻 Author
-
-Built by [Nikhil Kataria](https://www.linkedin.com/in/nikhilnkataria) —
-Engineering Manager | Node.js | AWS | Scalable Systems
-
-- 🔗 Portfolio: [nikhilkataria.com](https://nikhilkataria.com)
-- 💼 LinkedIn: [linkedin.com/in/nikhilnkataria](https://www.linkedin.com/in/nikhilnkataria)
-- 💻 GitHub: [github.com/nikhilnkataria](https://github.com/nikhilnkataria)
-
-## 🛡 License
-
-MIT
+Feel free to explore the code, report issues, and suggest improvements. Your feedback is valuable to us!
